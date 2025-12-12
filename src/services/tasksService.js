@@ -13,24 +13,8 @@ import {
   onSnapshot
 } from 'firebase/firestore';
 import { db } from './firebase';
-import chrono from 'chrono-node';
 
 console.log('📁 Tasks Service loaded');
-
-// Parse natural language date/time
-function parseNaturalLanguage(text) {
-  try {
-    const parsed = chrono.parse(text);
-    if (parsed.length > 0) {
-      const date = parsed[0].start.date();
-      console.log('🗓️ Parsed natural language date:', text, '→', date);
-      return date;
-    }
-  } catch (error) {
-    console.error('❌ Error parsing natural language:', error);
-  }
-  return null;
-}
 
 // Get all tasks for a user
 export async function getUserTasks(userId) {
@@ -82,21 +66,12 @@ export async function createTask(userId, taskData) {
     
     const tasksRef = collection(db, 'users', userId, 'tasks');
     
-    // Try to parse natural language if provided
-    let dueDate = taskData.dueDate;
-    if (typeof taskData.dueDate === 'string' && taskData.dueDate.trim()) {
-      const parsedDate = parseNaturalLanguage(taskData.dueDate);
-      if (parsedDate) {
-        dueDate = parsedDate.toISOString();
-      }
-    }
-    
     const newTask = {
       userId,
       goalId: taskData.goalId || null,
       title: taskData.title,
       description: taskData.description || '',
-      dueDate: dueDate || null,
+      dueDate: taskData.dueDate || null,
       status: 'todo',
       priority: taskData.priority || 'medium',
       subtasks: taskData.subtasks || [],
