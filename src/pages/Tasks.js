@@ -58,7 +58,7 @@ function Tasks() {
 
   const handleStatusChange = async (taskId, newStatus) => {
     try {
-      await updateTaskStatus(taskId, newStatus);
+      await updateTaskStatus(currentUser.uid, taskId, newStatus);
       loadTasks();
     } catch (error) {
       toast.error('Failed to update task');
@@ -68,7 +68,7 @@ function Tasks() {
   const handleDelete = async (id) => {
     if (window.confirm('Delete this task?')) {
       try {
-        await deleteTask(id);
+        await deleteTask(currentUser.uid, id);
         toast.success('Task deleted');
         loadTasks();
       } catch (error) {

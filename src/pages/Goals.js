@@ -46,7 +46,7 @@ function Goals() {
       };
 
       if (editingGoal) {
-        await updateGoal(editingGoal.id, goalData);
+        await updateGoal(currentUser.uid, editingGoal.id, goalData);
         toast.success('Goal updated!');
       } else {
         await createGoal(currentUser.uid, goalData);
@@ -65,7 +65,7 @@ function Goals() {
   const handleDelete = async (id) => {
     if (window.confirm('Delete this goal?')) {
       try {
-        await deleteGoal(id);
+        await deleteGoal(currentUser.uid, id);
         toast.success('Goal deleted');
         loadGoals();
       } catch (error) {

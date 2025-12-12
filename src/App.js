@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AuthProvider } from './contexts/AuthContext';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -14,19 +14,15 @@ import Tasks from './pages/Tasks';
 import Calendar from './pages/Calendar';
 import Analytics from './pages/Analytics';
 import Profile from './pages/Profile';
+import AdminPanel from './pages/AdminPanel';
 import Layout from './components/common/Layout';
 import Landing from './pages/Landing';
-
-// Protected Route Component
-function ProtectedRoute({ children }) {
-  const { currentUser } = useAuth();
-  return currentUser ? children : <Navigate to="/login" />;
-}
+import PrivateRoute from './components/PrivateRoute';
 
 // Public Route Component (redirect to dashboard if already logged in)
 function PublicRoute({ children }) {
-  const { currentUser } = useAuth();
-  return !currentUser ? children : <Navigate to="/dashboard" />;
+  // This will be handled by PrivateRoute check
+  return children;
 }
 
 function App() {
@@ -58,49 +54,57 @@ function App() {
             <Route
               path="/dashboard"
               element={
-                <ProtectedRoute>
+                <PrivateRoute>
                   <Layout><Dashboard /></Layout>
-                </ProtectedRoute>
+                </PrivateRoute>
               }
             />
             <Route
               path="/goals"
               element={
-                <ProtectedRoute>
+                <PrivateRoute>
                   <Layout><Goals /></Layout>
-                </ProtectedRoute>
+                </PrivateRoute>
               }
             />
             <Route
               path="/tasks"
               element={
-                <ProtectedRoute>
+                <PrivateRoute>
                   <Layout><Tasks /></Layout>
-                </ProtectedRoute>
+                </PrivateRoute>
               }
             />
             <Route
               path="/calendar"
               element={
-                <ProtectedRoute>
+                <PrivateRoute>
                   <Layout><Calendar /></Layout>
-                </ProtectedRoute>
+                </PrivateRoute>
               }
             />
             <Route
               path="/analytics"
               element={
-                <ProtectedRoute>
+                <PrivateRoute>
                   <Layout><Analytics /></Layout>
-                </ProtectedRoute>
+                </PrivateRoute>
               }
             />
             <Route
               path="/profile"
               element={
-                <ProtectedRoute>
+                <PrivateRoute>
                   <Layout><Profile /></Layout>
-                </ProtectedRoute>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <PrivateRoute>
+                  <Layout><AdminPanel /></Layout>
+                </PrivateRoute>
               }
             />
 

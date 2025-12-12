@@ -15,11 +15,19 @@ import {
 import { db } from './firebase';
 import chrono from 'chrono-node';
 
+console.log('📁 Tasks Service loaded');
+
 // Parse natural language date/time
 function parseNaturalLanguage(text) {
-  const parsed = chrono.parse(text);
-  if (parsed.length > 0) {
-    return parsed[0].start.date();
+  try {
+    const parsed = chrono.parse(text);
+    if (parsed.length > 0) {
+      const date = parsed[0].start.date();
+      console.log('🗓️ Parsed natural language date:', text, '→', date);
+      return date;
+    }
+  } catch (error) {
+    console.error('❌ Error parsing natural language:', error);
   }
   return null;
 }
@@ -27,12 +35,10 @@ function parseNaturalLanguage(text) {
 // Get all tasks for a user
 export async function getUserTasks(userId) {
   try {
-    const tasksRef = collection(db, 'tasks');
-    const q = query(
-      tasksRef,
-      where('userId', '==', userId),
-      orderBy('createdAt', 'desc')
-    );
+    console.log('📥 Fetching tasks for user:', userId);
+    
+    const tasksRef = collection(db, 'users', userId, 'tasks');
+    const q = query(tasksRef, orderBy('createdAt', 'desc'));
     
     const querySnapshot = await getDocs(q);
     const tasks = [];
@@ -41,39 +47,44 @@ export async function getUserTasks(userId) {
       tasks.push({ id: doc.id, ...doc.data() });
     });
     
+    console.log(`✅ Fetched ${tasks.length} tasks`);
     return tasks;
   } catch (error) {
-    console.error('Error fetching tasks:', error);
+    console.error('❌ Error fetching tasks:', error);
     throw error;
   }
 }
 
 // Subscribe to real-time tasks updates
 export function subscribeToUserTasks(userId, callback) {
-  const tasksRef = collection(db, 'tasks');
-  const q = query(
-    tasksRef,
-    where('userId', '==', userId),
-    orderBy('createdAt', 'desc')
-  );
+  console.log('👂 Subscribing to tasks for user:', userId);
+  
+  const tasksRef = collection(db, 'users', userId, 'tasks');
+  const q = query(tasksRef, orderBy('createdAt', 'desc'));
   
   return onSnapshot(q, (snapshot) => {
     const tasks = [];
     snapshot.forEach((doc) => {
       tasks.push({ id: doc.id, ...doc.data() });
     });
+    
+    console.log(`🔄 Real-time update: ${tasks.length} tasks`);
     callback(tasks);
+  }, (error) => {
+    console.error('❌ Error in tasks subscription:', error);
   });
 }
 
 // Create a new task
 export async function createTask(userId, taskData) {
   try {
-    const tasksRef = collection(db, 'tasks');
+    console.log('➕ Creating task for user:', userId);
+    
+    const tasksRef = collection(db, 'users', userId, 'tasks');
     
     // Try to parse natural language if provided
     let dueDate = taskData.dueDate;
-    if (typeof taskData.dueDate === 'string') {
+    if (typeof taskData.dueDate === 'string' && taskData.dueDate.trim()) {
       const parsedDate = parseNaturalLanguage(taskData.dueDate);
       if (parsedDate) {
         dueDate = parsedDate.toISOString();
@@ -95,50 +106,65 @@ export async function createTask(userId, taskData) {
     };
     
     const docRef = await addDoc(tasksRef, newTask);
+    console.log('✅ Task created with ID:', docRef.id);
+    
     return { id: docRef.id, ...newTask };
   } catch (error) {
-    console.error('Error creating task:', error);
+    console.error('❌ Error creating task:', error);
     throw error;
   }
 }
 
 // Update a task
-export async function updateTask(taskId, updates) {
+export async function updateTask(userId, taskId, updates) {
   try {
-    const taskRef = doc(db, 'tasks', taskId);
+    console.log('✏️ Updating task:', taskId);
+    
+    const taskRef = doc(db, 'users', userId, 'tasks', taskId);
     await updateDoc(taskRef, {
       ...updates,
       updatedAt: serverTimestamp()
     });
+    
+    console.log('✅ Task updated successfully');
   } catch (error) {
-    console.error('Error updating task:', error);
+    console.error('❌ Error updating task:', error);
     throw error;
   }
 }
 
 // Delete a task
-export async function deleteTask(taskId) {
+export async function deleteTask(userId, taskId) {
   try {
-    const taskRef = doc(db, 'tasks', taskId);
+    console.log('🗑️ Deleting task:', taskId);
+    
+    const taskRef = doc(db, 'users', userId, 'tasks', taskId);
     await deleteDoc(taskRef);
+    
+    console.log('✅ Task deleted successfully');
   } catch (error) {
-    console.error('Error deleting task:', error);
+    console.error('❌ Error deleting task:', error);
     throw error;
   }
 }
 
 // Get task by ID
-export async function getTaskById(taskId) {
+export async function getTaskById(userId, taskId) {
   try {
-    const taskRef = doc(db, 'tasks', taskId);
+    console.log('📄 Fetching task:', taskId);
+    
+    const taskRef = doc(db, 'users', userId, 'tasks', taskId);
     const taskDoc = await getDoc(taskRef);
     
     if (taskDoc.exists()) {
+      console.log('✅ Task found');
       return { id: taskDoc.id, ...taskDoc.data() };
     }
+    
+    console.log('❌ Task not found');
     return null;
   } catch (error) {
-    console.error('Error fetching task:', error);
+    console.error('❌ Error fetching task:', error);
     throw error;
   }
 }
@@ -146,10 +172,11 @@ export async function getTaskById(taskId) {
 // Get tasks by goal ID
 export async function getTasksByGoalId(userId, goalId) {
   try {
-    const tasksRef = collection(db, 'tasks');
+    console.log('📂 Fetching tasks for goal:', goalId);
+    
+    const tasksRef = collection(db, 'users', userId, 'tasks');
     const q = query(
       tasksRef,
-      where('userId', '==', userId),
       where('goalId', '==', goalId),
       orderBy('createdAt', 'desc')
     );
@@ -161,31 +188,38 @@ export async function getTasksByGoalId(userId, goalId) {
       tasks.push({ id: doc.id, ...doc.data() });
     });
     
+    console.log(`✅ Found ${tasks.length} tasks for goal`);
     return tasks;
   } catch (error) {
-    console.error('Error fetching tasks by goal:', error);
+    console.error('❌ Error fetching tasks by goal:', error);
     throw error;
   }
 }
 
 // Update task status
-export async function updateTaskStatus(taskId, status) {
+export async function updateTaskStatus(userId, taskId, status) {
   try {
-    const taskRef = doc(db, 'tasks', taskId);
+    console.log('🔄 Updating task status:', taskId, '→', status);
+    
+    const taskRef = doc(db, 'users', userId, 'tasks', taskId);
     await updateDoc(taskRef, {
       status,
       updatedAt: serverTimestamp()
     });
+    
+    console.log('✅ Task status updated');
   } catch (error) {
-    console.error('Error updating task status:', error);
+    console.error('❌ Error updating task status:', error);
     throw error;
   }
 }
 
 // Add subtask
-export async function addSubtask(taskId, subtaskTitle) {
+export async function addSubtask(userId, taskId, subtaskTitle) {
   try {
-    const taskRef = doc(db, 'tasks', taskId);
+    console.log('➕ Adding subtask to task:', taskId);
+    
+    const taskRef = doc(db, 'users', userId, 'tasks', taskId);
     const taskDoc = await getDoc(taskRef);
     
     if (taskDoc.exists()) {
@@ -200,17 +234,21 @@ export async function addSubtask(taskId, subtaskTitle) {
         subtasks: [...currentSubtasks, newSubtask],
         updatedAt: serverTimestamp()
       });
+      
+      console.log('✅ Subtask added');
     }
   } catch (error) {
-    console.error('Error adding subtask:', error);
+    console.error('❌ Error adding subtask:', error);
     throw error;
   }
 }
 
 // Update subtask
-export async function updateSubtask(taskId, subtaskId, completed) {
+export async function updateSubtask(userId, taskId, subtaskId, completed) {
   try {
-    const taskRef = doc(db, 'tasks', taskId);
+    console.log('✏️ Updating subtask:', subtaskId);
+    
+    const taskRef = doc(db, 'users', userId, 'tasks', taskId);
     const taskDoc = await getDoc(taskRef);
     
     if (taskDoc.exists()) {
@@ -223,9 +261,11 @@ export async function updateSubtask(taskId, subtaskId, completed) {
         subtasks: updatedSubtasks,
         updatedAt: serverTimestamp()
       });
+      
+      console.log('✅ Subtask updated');
     }
   } catch (error) {
-    console.error('Error updating subtask:', error);
+    console.error('❌ Error updating subtask:', error);
     throw error;
   }
 }
@@ -233,17 +273,15 @@ export async function updateSubtask(taskId, subtaskId, completed) {
 // Get tasks due today
 export async function getTasksDueToday(userId) {
   try {
+    console.log('📅 Fetching tasks due today');
+    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
     
-    const tasksRef = collection(db, 'tasks');
-    const q = query(
-      tasksRef,
-      where('userId', '==', userId),
-      where('status', '!=', 'done')
-    );
+    const tasksRef = collection(db, 'users', userId, 'tasks');
+    const q = query(tasksRef, where('status', '!=', 'done'));
     
     const querySnapshot = await getDocs(q);
     const tasks = [];
@@ -258,9 +296,10 @@ export async function getTasksDueToday(userId) {
       }
     });
     
+    console.log(`✅ Found ${tasks.length} tasks due today`);
     return tasks;
   } catch (error) {
-    console.error('Error fetching tasks due today:', error);
+    console.error('❌ Error fetching tasks due today:', error);
     throw error;
   }
 }
